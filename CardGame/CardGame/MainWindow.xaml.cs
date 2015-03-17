@@ -26,69 +26,63 @@ namespace CardGame
         List<Image> cards = new List<Image>();
         bool active = false;
         Point LastPoint;
+        Rectangle activeCard;
+        double borderOffset;
+        Random rand = new Random();
+        public const int cardWidth = 72, cardHeight = 96;
         public MainWindow()
         {
             InitializeComponent();
+            AddCard("DrawPile", new Uri(@".\Images\b1fv.png", UriKind.Relative), 0, 0, deck_MouseLeftButtonDown);
 
-            Image mikeImage = new Image();
-            mikeImage.Source = new BitmapImage(new Uri(@".\Capture.PNG", UriKind.Relative));
-            mikeImage.Width = 50;
-            mikeImage.Height = 50;
-            mikeImage.Name = "MikeCard";
-            mikeImage.SetValue(Canvas.LeftProperty, (double)50);
-            mikeImage.SetValue(Canvas.TopProperty, (double)50);
-            mikeImage.SetValue(Canvas.ZIndexProperty, zIndex++);
-            cards.Add(mikeImage);
-
-            Image mikeImage2 = new Image();
-            mikeImage2.Source = new BitmapImage(new Uri(@".\Capture.PNG", UriKind.Relative));
-            mikeImage2.Width = 50;
-            mikeImage2.Height = 50;
-            mikeImage2.Name = "MikeCard";
-            mikeImage2.SetValue(Canvas.LeftProperty, (double)150);
-            mikeImage2.SetValue(Canvas.TopProperty, (double)150);
-            mikeImage.SetValue(Canvas.ZIndexProperty, zIndex++);
-            cards.Add(mikeImage2);
-
-
-            MainCanvas.Children.Add(mikeImage);
-            MainCanvas.Children.Add(mikeImage2);
         }
 
+        void AddCard(String cardName, Uri imagePath, double left, double top, MouseButtonEventHandler action = null)
+        {
+            Image deck = new Image();
+            deck.Source = new BitmapImage(imagePath);
+            deck.Width = cardWidth;
+            deck.Height = cardHeight;
+            deck.Name = cardName;
+            deck.SetValue(Canvas.LeftProperty, left);
+            deck.SetValue(Canvas.TopProperty, top);
+            deck.SetValue(Canvas.ZIndexProperty, zIndex++);
+            deck.MouseLeftButtonDown += action;
+            cards.Add(deck);
+            MainCanvas.Children.Add(deck);
+        }
 
-        private void MainCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        void deck_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            Console.Out.WriteLine("Draw Pile Clicked");
+            String name = (rand.Next(51) + 1).ToString();
+            AddCard("Card" + name, new Uri(@".\Images\" + name + ".png", UriKind.Relative), 10, 0, card_MouseLeftButtonDown);
+        }
+
+        void card_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             LastPoint = Mouse.GetPosition(MainCanvas);
-            foreach (Image i in cards)
-            {
-                double xStart = (double)i.GetValue(Canvas.LeftProperty);
-                double xStop = xStart + i.Width;
-                double yStart = Canvas.GetTop(i);
-                double yStop = yStart + i.Height;
-                Debug.WriteLine("xStart " + xStart);
-                Debug.WriteLine("xStop " + xStop);
-                Debug.WriteLine("yStart " + yStart);
-                Debug.WriteLine("yStop " + yStop);
-                if ((LastPoint.X >= xStart && LastPoint.X <= xStop) && (LastPoint.Y >= yStart && LastPoint.Y <= yStop))
-                {
-                    if (selectedImage != null)
-                    {
-                        if ((int)i.GetValue(Canvas.ZIndexProperty) > (int)selectedImage.GetValue(Canvas.ZIndexProperty))
-                        {
-                            selectedImage = i;
-                        }
-                    }
-                    else
-                    {
-                        selectedImage = i;
-                    }
-                }
-
-            }
+            selectedImage = (Image)sender;
             selectedImage.SetValue(Canvas.ZIndexProperty, zIndex++);
             active = true;
-            Debug.WriteLine("Mouse Down");
+            Debug.WriteLine("Card Clicked");
+
+            activeCard = new System.Windows.Shapes.Rectangle();
+            activeCard.Stroke = new SolidColorBrush(Colors.DarkRed);
+            activeCard.StrokeThickness = 2.0;
+            activeCard.Fill = Brushes.Transparent;
+
+            borderOffset = activeCard.StrokeThickness;
+            activeCard.Width = selectedImage.ActualWidth + borderOffset * 2;
+            activeCard.Height = selectedImage.ActualHeight + borderOffset * 2;
+            Canvas.SetLeft(activeCard, Canvas.GetLeft(selectedImage) - borderOffset);
+            Canvas.SetTop(activeCard, Canvas.GetTop(selectedImage) - borderOffset);
+
+            activeCard.SetValue(Canvas.ZIndexProperty, zIndex + 1);
+
+            MainCanvas.Children.Add(activeCard);
         }
+
 
         private void MainCanvas_MouseMove(object sender, MouseEventArgs e)
         {
@@ -108,6 +102,8 @@ namespace CardGame
 
                 Canvas.SetLeft(selectedImage, newX);
                 Canvas.SetTop(selectedImage, newY);
+                Canvas.SetLeft(activeCard, Canvas.GetLeft(selectedImage) - borderOffset);
+                Canvas.SetTop(activeCard, Canvas.GetTop(selectedImage) - borderOffset);
             }
 
         }
@@ -115,10 +111,12 @@ namespace CardGame
 
         private void MainCanvas_MouseUp(object sender, MouseButtonEventArgs e)
         {
+            MainCanvas.Children.Remove(activeCard);
             selectedImage = null;
             active = false;
             Debug.WriteLine("Mouse Up");
         }
+
 
 
 
